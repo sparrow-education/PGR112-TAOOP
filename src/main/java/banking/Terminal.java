@@ -1,15 +1,12 @@
 package banking;
 
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Scanner;
-
+import java.util.*;
 
 public class Terminal {
     private static final Scanner scan = new Scanner(System.in);
     private static final ArrayList<String> login = new ArrayList<>();
     private static final ArrayList<String> menu = new ArrayList<>();
+    private static final HashMap<String, User> currentUser = Bank.getMyUsers();
     private static int totalBalance;
     private static int deposit;
     private static int withdraw;
@@ -51,26 +48,21 @@ public class Terminal {
 
     private static void authenticateHandler(String usr, String pw) {
         try {
-            User authUser;
-            if (Bank.getMyUsers().get(usr).equals(pw)) {
-                authUser = new User(usr, pw);
+            if (currentUser.containsKey(usr) && currentUser.get(usr).getPassword().equals(pw)) {
                 System.out.println("=".repeat(25));
-                System.out.printf("\rWelcome back %s \r\n", authUser.getUserName());
+                System.out.printf("\rWelcome back %s \r\n", usr);
                 System.out.println("=".repeat(25));
 
+                totalBalance = Bank.getMyUsers().get(usr).getAccountBalance(); // get balance from user
                 while (true) {
                     System.out.printf("%-8s %-10s", "", usr);
                     displayBankingMenu();
                     String choice = scan.nextLine();
                     if (choice.equals("5")) {
                         System.out.println("Logout");
-                        totalBalance = 0;
-                        withdraw = 0;
-                        deposit = 0;
-                        transfer = 0;
                         break;
                     }
-                    bankingMenuHandler(authUser, choice);
+                    bankingMenuHandler(Bank.getMyUsers().get(usr), choice);
                 }
             }
         } catch (NullPointerException e) {
@@ -88,7 +80,13 @@ public class Terminal {
             case "2" -> depositHandler(usr);
             case "3" -> withdrawHandler(usr);
             case "4" -> transferHandler(usr);
-            case "5" -> mainMenu();
+            case "5" -> {
+                mainMenu();
+                totalBalance = 0;
+                withdraw = 0;
+                deposit = 0;
+                transfer = 0;
+            }
         }
     }
 
@@ -110,14 +108,10 @@ public class Terminal {
             System.out.println("Invalid amount");
             System.out.println("=".repeat(25));
         } else {
-            totalBalance += amount;
-            deposit = amount;
+            totalBalance = usr.getAccountBalance() + amount;
+            deposit += amount;
             usr.setAccountBalance(totalBalance);
-//            System.out.println("_".repeat(25));
-//            System.out.printf("You deposited: %s \r\n", amount);
-//            System.out.println("_".repeat(25));
             printHandler(usr.getUserName(), usr.getAccountBalance(), deposit, withdraw, transfer);
-            deposit = 0;
             return totalBalance;
         }
         return 0;
@@ -125,68 +119,52 @@ public class Terminal {
 
     private static int withdrawHandler(User usr) throws NullPointerException {
         assert usr != null;
-        System.out.print("Enter amount to withdraw: ");
+        System.out.println("Enter amount to withdraw: ");
         int amount = scan.nextInt();
         scan.nextLine();
-        if (amount > getBalance(usr) || amount < 0) {
-            System.out.println("=".repeat(25));
+        if (amount > usr.getAccountBalance() || amount < 0) {
             System.out.println("Insufficient funds");
-            System.out.println("=".repeat(25));
         } else {
-            totalBalance -= amount;
-            withdraw = amount;
-            usr.setAccountBalance(totalBalance);
+            withdraw += amount;
+            usr.setAccountBalance(usr.getAccountBalance() - amount);
             printHandler(usr.getUserName(), usr.getAccountBalance(), deposit, withdraw, transfer);
-            withdraw = 0;
-            return totalBalance;
         }
         return 0;
     }
 
     private static int transferHandler(User usr) {
-        try {
-            System.out.print("Receiver account: ");
-            String target = scan.nextLine();
-            //TODO Fix validation
-            User valid = targetValidate(target);
-            System.out.print("Transfer amount: ");
-            int amount = scan.nextInt();
-            scan.nextLine();
-            totalBalance = usr.getAccountBalance();
-            if (amount > totalBalance || amount < 0) {
-                System.out.println("=".repeat(25));
-                System.out.println("Insufficient funds");
-                System.out.println("=".repeat(25));
-            } else {
-                totalBalance += amount;
-                transfer = amount;
-                usr.setAccountBalance(totalBalance);
-                printHandler(usr.getUserName(), usr.getAccountBalance(), deposit, withdraw, transfer);
-            }
-
-        } catch (NullPointerException e) {
+        assert usr != null;
+        System.out.print("Enter receiver account: ");
+        String targetAccount = scan.nextLine();
+        User receiver = targetValidate(targetAccount);
+        if (receiver == null) {
             System.out.println("Invalid account");
-        } finally {
-            mainMenu();
+            return 0;
+        }
+
+        System.out.print("Enter transfer amount: ");
+        int amount = scan.nextInt();
+        scan.nextLine();
+
+        if (getBalance(usr) < amount || amount <= 0) {
+            System.out.println("=".repeat(25));
+            System.out.println("Insufficient funds");
+            System.out.println("=".repeat(25));
+        } else {
+            System.out.println(totalBalance);
+            totalBalance -= amount;
+            System.out.println(totalBalance);
+            transfer += amount;
+            usr.setAccountBalance(usr.getAccountBalance() - amount);
+            receiver.setAccountBalance(receiver.getAccountBalance() + amount);
+            printHandler(usr.getUserName(), usr.getAccountBalance(), deposit, withdraw, transfer);
         }
         return 0;
     }
 
     private static User targetValidate(String usr) {
-        String key;
-        String value;
-        if (Bank.getMyUsers().containsKey(usr)) {
-            for (Map.Entry<String, String> user : Bank.getMyUsers().entrySet()) {
-                if (!user.getKey().equals(usr)) {
-                    key = user.getKey();
-                    value = user.getValue();
-                    return new User(key, value);
-                }
-                break;
-            }
-            //System.out.println(key + " " + value); should contain null can't transfer to yourself!
-        }
-        return null;
+        assert usr != null;
+        return currentUser.get(usr);
     }
 
     private static void displayBankingMenu() {
@@ -196,9 +174,11 @@ public class Terminal {
     }
 
     private static void printHandler(String usr, int balance, int deposit, int withdraw, int transfer) {
+        String positive = (deposit > 0) ? "+" : "";
+        String negative = (withdraw > 0) ? "-" : "";
         System.out.printf("\r\n%-20s %-15s %-15s %-15s %-15s %n", "Account:", "Balance", "Deposit", "Withdraw", "Transfer");
         System.out.println("------------------------------------------------------------------------------");
-        System.out.printf("%-20s %-15d %-15d %-15d %-15d %n", usr, balance, deposit, withdraw, transfer);
+        System.out.printf("%-20s %-15d %s%-15d %s%-15d %-15d %n", usr, balance, positive, deposit, negative, withdraw, transfer);
         System.out.println("------------------------------------------------------------------------------");
     }
 }

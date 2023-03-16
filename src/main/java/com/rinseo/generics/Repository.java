@@ -14,7 +14,7 @@ import java.util.List;
 public class Repository<T extends Repository.definingId<secondPara>, secondPara> {
     // record to model data 'Person'
     record Person(String firstName, String lastName, Long id) implements definingId<Long> {}
-    private List<T> records = new ArrayList<>();
+    private final List<T> records = new ArrayList<>();
 
     List<T> getAll() {
         return records;

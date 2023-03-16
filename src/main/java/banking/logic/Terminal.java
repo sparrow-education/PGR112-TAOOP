@@ -1,6 +1,10 @@
-package banking;
+package banking.logic;
 
-import java.util.*;
+import banking.model.dto.User;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Scanner;
 
 public class Terminal {
     private static final Scanner scan = new Scanner(System.in);
@@ -24,10 +28,6 @@ public class Terminal {
         menu.add("|\t4. Transfer\t\t|");
         menu.add("|\t5. Logout\t\t|");
         menu.add("+-------------------+");
-    }
-
-    public static void main(String[] args) {
-        mainMenu();
     }
 
     public static void mainMenu() {

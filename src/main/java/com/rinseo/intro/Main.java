@@ -10,7 +10,7 @@ import java.util.ArrayList;
  * java -cp out\production\TAOOP com.rinseo.intro.Main
  */
 public class Main {
-    private ArrayList<String> myList = new ArrayList<>();
+    private final ArrayList<String> myList = new ArrayList<>();
     public Main() {
         myList.add("Hello World!");
     }

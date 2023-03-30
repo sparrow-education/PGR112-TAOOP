@@ -22,6 +22,3 @@ Antonio Vivaldi
 tester
 1000-1911
 ---
-Sjur
-1000-1050
----
